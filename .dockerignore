@@ -1,22 +1,69 @@
-**/*.env
+# Contexto de build de Docker.
+#
+# El Dockerfile se construye con la raíz del repositorio como contexto, así que
+# este archivo decide qué se empaqueta y se sube al build. La regla es que solo
+# entre lo que la imagen ejecuta: package.json, package-lock.json, server.js,
+# healthcheck.js y src/ sin sus pruebas.
+
+# Dependencias y artefactos regenerables
+node_modules
+coverage
+.nyc_output
+*.lcov
+logs
+
+# Pruebas: mocha, c8, supertest y los nocks son devDependencies que la imagen
+# no instala, así que sus archivos tampoco tienen por qué viajar en ella.
+#
+# vc.js es la excepción: aunque vive entre las fixtures, /healthz lo importa
+# para firmar una credencial de prueba en cada chequeo, así que es código de
+# producción y sin él el servicio no arranca.
+src/**/*.test.js
+src/test-fixtures
+!src/test-fixtures/vc.js
+
+# Control de versiones y automatización
 .git
+.gitignore
+.gitattributes
 .github
 .husky
-coverage
-logs
-# node_modules
-.dockerignore
+
+# Documentación
+*.md
+LICENSE
+
+# Herramientas de desarrollo
 .editorconfig
 .eslintrc.cjs
-.gitignore
+.eslintcache
 .lintstagedrc.json
 .prettierignore
 .prettierrc.js
-compose-test.yaml
-compose.yaml
-compose-health-test.yaml
+.vscode
+.idea
+.claude
 Dockerfile
-README
+Dockerfile.local
+.dockerignore
+compose.yaml
+compose-test.yaml
+compose-health-test.yaml
+
+# Certificados autofirmados de desarrollo. ENABLE_HTTPS_FOR_DEV solo aplica en
+# local —en Container Apps el TLS lo termina el ingress— y un par de llaves
+# versionado en el repositorio no debe viajar dentro de la imagen.
 server-dev-only.cert
 server-dev-only.key
- .env.healthcheck.testing
+
+# Entorno local y logs
+**/*.env
+.env
+.env.*
+*.log
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
