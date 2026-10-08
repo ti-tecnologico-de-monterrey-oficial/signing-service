@@ -8,7 +8,7 @@ on:
       - 'server.js'
       - 'package.json'
       - 'package-lock.json'
-      - '.eslintrc.cjs'
+      - 'eslint.config.js'
       - '.github/workflows/ci-signing-service.yml'
   push:
     branches: [develop, release, main]
@@ -17,7 +17,7 @@ on:
       - 'server.js'
       - 'package.json'
       - 'package-lock.json'
-      - '.eslintrc.cjs'
+      - 'eslint.config.js'
       - '.github/workflows/ci-signing-service.yml'
 
 permissions:
@@ -60,6 +60,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: coverage-issuer-coordinator
+          name: coverage-signing-service
           path: coverage/
           retention-days: 14
