@@ -1,12 +1,19 @@
 name: CD · signing-service
 
+# Los `paths` listan lo que entra en la imagen. Un cambio en el README, en las
+# pruebas o en los .env de ejemplo no produce una imagen distinta, así que
+# tampoco dispara un despliegue.
+
 on:
   workflow_dispatch:
   push:
     branches: [develop, release, main]
     paths:
       - 'src/**'
+      - '!src/**/*.test.js'
+      - '!src/test-fixtures/**'
       - 'server.js'
+      - 'healthcheck.js'
       - 'package.json'
       - 'package-lock.json'
       - 'Dockerfile'
@@ -21,10 +28,7 @@ jobs:
     uses: ./.github/workflows/_deploy-aca.yml
     with:
       CONTAINER_NAME: dcc-signing-devl
-      DOCKER_PATH: Dockerfile
       ACA_ENVIRONMENT: Dev
-      ENVIRONMENT: development
-      USE_SUFFIX: false
     secrets: inherit
 
   release:
@@ -33,10 +37,7 @@ jobs:
     uses: ./.github/workflows/_deploy-aca.yml
     with:
       CONTAINER_NAME: dcc-signing-pprd
-      DOCKER_PATH: Dockerfile
       ACA_ENVIRONMENT: Pprd
-      ENVIRONMENT: pprd
-      USE_SUFFIX: false
     secrets: inherit
 
   main:
@@ -45,9 +46,5 @@ jobs:
     uses: ./.github/workflows/_deploy-aca.yml
     with:
       CONTAINER_NAME: dcc-signing-prod
-      DOCKER_PATH: Dockerfile
       ACA_ENVIRONMENT: Prod
-      ENVIRONMENT: production
-      USE_SUFFIX: false
     secrets: inherit
-
