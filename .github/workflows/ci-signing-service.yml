@@ -9,6 +9,7 @@ on:
       - 'package.json'
       - 'package-lock.json'
       - 'eslint.config.js'
+      - 'vitest.config.js'
       - '.github/workflows/ci-signing-service.yml'
   push:
     branches: [develop, release, main]
@@ -18,6 +19,7 @@ on:
       - 'package.json'
       - 'package-lock.json'
       - 'eslint.config.js'
+      - 'vitest.config.js'
       - '.github/workflows/ci-signing-service.yml'
 
 permissions:
@@ -32,7 +34,7 @@ concurrency:
 
 jobs:
   test:
-    name: Mocha con cobertura
+    name: Vitest con cobertura
     runs-on: ubuntu-latest
     timeout-minutes: 20
 

@@ -10,6 +10,7 @@ on:
       - 'server.js'
       - 'package.json'
       - 'package-lock.json'
+      - 'vitest.config.js'
       - 'sonar-project.properties'
       - '.github/workflows/ci-sonar.yml'
 
@@ -20,6 +21,7 @@ on:
       - 'server.js'
       - 'package.json'
       - 'package-lock.json'
+      - 'vitest.config.js'
       - 'sonar-project.properties'
       - '.github/workflows/ci-sonar.yml'
 
