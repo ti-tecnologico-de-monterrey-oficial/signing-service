@@ -3,6 +3,7 @@ import { Ed25519VerificationKey2020 } from '@digitalbazaar/ed25519-verification-
 import decodeSeed from './utils/decodeSeed.js'
 import { expect } from 'chai'
 import request from 'supertest'
+import axios from 'axios'
 import { clearIssuerInstances } from './issue.js'
 import {
   resetConfig,
@@ -21,6 +22,8 @@ import {
 } from './test-fixtures/vc.js'
 
 import { build } from './app.js'
+import errorHandler from './middleware/errorHandler.js'
+import errorLogger from './middleware/errorLogger.js'
 
 const didKeyDriver = driver()
 didKeyDriver.use({
@@ -78,6 +81,74 @@ describe('api', () => {
         .post('/instance/testing/credentials/sign')
         .expect('Content-Type', /json/)
         .expect(400, done)
+    })
+
+    it('returns 400 if the credential body is empty', async () => {
+      const response = await request(app)
+        .post('/instance/testing/credentials/sign')
+        .send({})
+
+      expect(response.status).to.eql(400)
+      expect(response.body.message).to.contain(
+        'A verifiable credential must be provided'
+      )
+    })
+
+    it('returns 400 for an unsupported signing suite', async () => {
+      const response = await request(app)
+        .post('/instance/testing/credentials/sign?suite=unsupported')
+        .send(getUnsignedVC())
+
+      expect(response.status).to.eql(400)
+      expect(response.body.message).to.contain(
+        'An invalid signing suite was specified.'
+      )
+    })
+
+    it('returns 420 if the issuer is missing', async () => {
+      const credential = getUnsignedVC()
+      delete credential.issuer
+      const response = await request(app)
+        .post('/instance/testing/credentials/sign')
+        .send(credential)
+
+      expect(response.status).to.eql(420)
+      expect(response.body.message).to.contain('issuer property')
+    })
+
+    it('returns 420 if the issuer is an array', async () => {
+      const credential = getUnsignedVC()
+      credential.issuer = []
+      const response = await request(app)
+        .post('/instance/testing/credentials/sign')
+        .send(credential)
+
+      expect(response.status).to.eql(420)
+      expect(response.body.message).to.contain('cannot be an Array')
+    })
+
+    it('returns 420 if the issuer is neither a string nor an object', async () => {
+      const credential = getUnsignedVC()
+      credential.issuer = 42
+      const response = await request(app)
+        .post('/instance/testing/credentials/sign')
+        .send(credential)
+
+      expect(response.status).to.eql(420)
+      expect(response.body.message).to.contain(
+        'must be either a string or an object'
+      )
+    })
+
+    it('replaces a string issuer with the signing DID', async () => {
+      const credential = getUnsignedVC()
+      credential.issuer = 'did:example:issuer'
+      const response = await request(app)
+        .post('/instance/testing/credentials/sign')
+        .send(credential)
+
+      expect(response.status).to.eql(200)
+      expect(response.body.issuer).to.eql(signingDID)
     })
 
     it('returns 404 if no seed for tenant name', async () => {
@@ -204,8 +275,8 @@ describe('api', () => {
         .expect('Content-Type', /json/)
         .expect((res) => {
           expect(res.body.issuer.id).to.eql('did:web:example.com')
-          expect(res.body.proof.cryptosuite === 'eddsa-rdfc-2022')
-          expect(res.body.proof.type === 'DataIntegrityProof')
+          expect(res.body.proof.cryptosuite).to.eql('eddsa-rdfc-2022')
+          expect(res.body.proof.type).to.eql('DataIntegrityProof')
         })
         .expect(200)
     })
@@ -218,7 +289,7 @@ describe('api', () => {
         .expect((res) => {
           expect(res.body.issuer.id).to.eql('did:web:example.com')
           expect(res.body.proof.cryptosuite).not.to.exist
-          expect(res.body.proof.type === 'Ed25519Signature2020')
+          expect(res.body.proof.type).to.eql('Ed25519Signature2020')
         })
         .expect(200)
     })
@@ -267,6 +338,13 @@ describe('api', () => {
         })
         .expect(200)
     })
+
+    it('forwards a missing request body to the error handler', async () => {
+      const response = await request(app).post('/did-web-generator')
+
+      expect(response.status).to.eql(500)
+      expect(response.body.code).to.eql(500)
+    })
   })
 
   describe('/did-key-generator', () => {
@@ -292,6 +370,21 @@ describe('api', () => {
           expect(res.body.message).to.contain('ok')
         })
         .expect(200)
+    })
+
+    it('returns 503 if the signed health credential has no proof', async () => {
+      const originalPost = axios.post
+      axios.post = async () => ({ data: {} })
+
+      try {
+        const response = await request(app).get('/healthz')
+
+        expect(response.status).to.eql(503)
+        expect(response.body.healthy).to.eql(false)
+        expect(response.body.error).to.contain('healthz check failed')
+      } finally {
+        axios.post = originalPost
+      }
     })
   })
 
@@ -321,5 +414,53 @@ describe('api', () => {
         })
         .expect(503)
     })
+  })
+})
+
+describe('Error middleware', () => {
+  it('uses fallback code and message when an error has neither', () => {
+    const response = {
+      headerName: undefined,
+      headerValue: undefined,
+      statusCode: undefined,
+      body: undefined,
+      header(name, value) {
+        this.headerName = name
+        this.headerValue = value
+        return this
+      },
+      status(code) {
+        this.statusCode = code
+        return this
+      },
+      json(body) {
+        this.body = body
+        return this
+      }
+    }
+
+    errorHandler({}, {}, response)
+
+    expect(response.headerName).to.eql('Content-Type')
+    expect(response.headerValue).to.eql('application/json')
+    expect(response.statusCode).to.eql(500)
+    expect(response.body.code).to.eql(500)
+    expect(response.body.message).to.contain('unknown error.')
+  })
+
+  it('logs an error and forwards it to the next middleware', () => {
+    const error = { message: '', stack: 'test stack' }
+    let forwardedError
+
+    errorLogger(
+      error,
+      { originalUrl: '/test', method: 'GET', ip: '127.0.0.1' },
+      {},
+      (nextError) => {
+        forwardedError = nextError
+      }
+    )
+
+    expect(forwardedError).to.equal(error)
   })
 })
