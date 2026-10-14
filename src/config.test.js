@@ -1,4 +1,12 @@
 import { expect } from 'chai'
+import {
+  afterAll as after,
+  afterEach,
+  beforeAll as before,
+  beforeEach,
+  describe,
+  it
+} from 'vitest'
 import { resetConfig, getConfig, getTenantSeed } from './config.js'
 
 const tenantName = 'configtest'
@@ -180,7 +188,7 @@ describe('Config', () => {
     it('throws an error when the seed is less than 32 bytes', async () => {
       process.env[`TENANT_SEED_${tenantName}`] = 'tooShort'
       try {
-        getTenantSeed('configtest')
+        await getTenantSeed('configtest')
       } catch (err) {
         expect(err).to.eql(
           TypeError(

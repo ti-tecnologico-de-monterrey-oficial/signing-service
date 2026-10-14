@@ -1,5 +1,13 @@
 import { driver } from '@digitalbazaar/did-method-key'
 import { Ed25519VerificationKey2020 } from '@digitalbazaar/ed25519-verification-key-2020'
+import {
+  afterAll as after,
+  afterEach,
+  beforeAll as before,
+  beforeEach,
+  describe,
+  it
+} from 'vitest'
 import decodeSeed from './utils/decodeSeed.js'
 import { expect } from 'chai'
 import request from 'supertest'
@@ -60,27 +68,27 @@ describe('api', () => {
   afterEach(async () => {})
 
   describe('GET /', () => {
-    it('GET / => hello', (done) => {
-      request(app)
+    it('GET / => hello', async () => {
+      await request(app)
         .get('/')
         .expect(200)
         .expect('Content-Type', /json/)
-        .expect(/{"message":"signing-service server status: ok."}/, done)
+        .expect(/\{"message":"signing-service server status: ok\."\}/)
     })
   })
 
   describe('GET /unknown', () => {
-    it('unknown endpoint returns 404', (done) => {
-      request(app).get('/unknown').expect(404, done)
-    }, 10000)
+    it('unknown endpoint returns 404', async () => {
+      await request(app).get('/unknown').expect(404)
+    })
   })
 
   describe('POST /instance/:instanceId/credentials/sign', () => {
-    it('returns 400 if no body', (done) => {
-      request(app)
+    it('returns 400 if no body', async () => {
+      await request(app)
         .post('/instance/testing/credentials/sign')
         .expect('Content-Type', /json/)
-        .expect(400, done)
+        .expect(400)
     })
 
     it('returns 400 if the credential body is empty', async () => {
@@ -197,13 +205,13 @@ describe('api', () => {
       expect(proof.verificationMethod).to.eql(verificationMethod)
     })
 
-    it('sets the issuer.id to signing DID', (done) => {
-      request(app)
+    it('sets the issuer.id to signing DID', async () => {
+      await request(app)
         .post('/instance/testing/credentials/sign')
         .send(getUnsignedVCWithStatus())
         .expect('Content-Type', /json/)
         .expect((res) => expect(res.body.issuer.id).to.eql(signingDID))
-        .expect(200, done)
+        .expect(200)
     })
 
     it('adds the suite context', async () => {
