@@ -68,7 +68,7 @@ const unsignedVC = {
       hashed: 'false'
     },
     achievement: {
-      id: 'http://izzy.iz',
+      id: 'https://izzy.iz',
       type: 'Achievement',
       criteria: {
         narrative: 'Completion of a credential.'

@@ -46,6 +46,16 @@ describe('dependency failures', () => {
     expect(response.body.message).toContain('seed failed')
   })
 
+  it('reports the service as unhealthy when the health signature has no proof', async () => {
+    mocks.signVC.mockResolvedValue({})
+
+    const response = await request(app).get('/healthz')
+
+    expect(response.status).toBe(503)
+    expect(response.body.healthy).toBe(false)
+    expect(response.body.error).toContain('healthz check failed')
+  })
+
   it('logs and rethrows a signing failure', async () => {
     const failure = Object.assign(new Error('signing failed'), { code: 500 })
     mocks.signVC.mockRejectedValue(failure)

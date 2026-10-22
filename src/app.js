@@ -1,6 +1,4 @@
 import express from 'express'
-import cors from 'cors'
-import axios from 'axios'
 import issue from './issue.js'
 import generateSeed from './generate.js'
 import accessLogger from './middleware/accessLogger.js'
@@ -14,20 +12,18 @@ import { TEST_TENANT_NAME } from './config.js'
 const allowedSigningSuites = ['eddsa2022', 'ed25519']
 
 export async function build() {
-  var app = express()
+  const app = express()
 
   // Add middleware to write http access logs
   app.use(accessLogger())
   app.use(express.json())
   app.use(express.urlencoded({ extended: false }))
-  app.use(cors())
 
   app.get('/healthz', async function (req, res) {
     try {
-      const { data } = await axios.post(
-        `${req.protocol}://${req.headers.host}/instance/${TEST_TENANT_NAME}/credentials/sign`,
-        getUnsignedVC()
-      )
+      // Firma en el proceso: llamarse a sí mismo por HTTP con el Host de la
+      // petición permitía dirigir esa llamada a cualquier servidor.
+      const data = await issue(getUnsignedVC(), TEST_TENANT_NAME, ['ed25519'])
       if (!data.proof)
         throw new SigningException(503, 'signing-service healthz failed')
     } catch (e) {
