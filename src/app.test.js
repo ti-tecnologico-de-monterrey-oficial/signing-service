@@ -6,10 +6,10 @@ import {
   beforeAll as before,
   beforeEach,
   describe,
+  expect,
   it
 } from 'vitest'
 import decodeSeed from './utils/decodeSeed.js'
-import { expect } from 'chai'
 import request from 'supertest'
 import axios from 'axios'
 import { clearIssuerInstances } from './issue.js'

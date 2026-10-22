@@ -1,17 +1,20 @@
-import { expect } from 'chai'
 import {
   afterAll as after,
   afterEach,
   beforeAll as before,
   beforeEach,
   describe,
+  expect,
   it
 } from 'vitest'
 import { resetConfig, getConfig, getTenantSeed } from './config.js'
 
 const tenantName = 'configtest'
 const withEnvironment = async (overrides, test) => {
-  const originalValues = Object.keys(overrides).map((key) => [key, process.env[key]])
+  const originalValues = Object.keys(overrides).map((key) => [
+    key,
+    process.env[key]
+  ])
   for (const [key, value] of Object.entries(overrides)) {
     if (value === undefined) {
       delete process.env[key]
