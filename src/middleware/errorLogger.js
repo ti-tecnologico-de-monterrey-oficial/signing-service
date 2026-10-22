@@ -1,4 +1,5 @@
 import logger from '../utils/logger.js'
+import sanitizeForLog from '../utils/sanitizeForLog.js'
 
 const errorLogger = (error, request, response, next) => {
   const stackTrace = error.stack || 'no stack trace available'
@@ -7,7 +8,9 @@ const errorLogger = (error, request, response, next) => {
   const message = `An error occurred in the signing-service: ${
     error.message || 'unknown error'
   }`
-  const logEntrySummary = `Error for route: ${request.originalUrl} - ${request.method} - IP: ${request.ip} - ${message}`
+  const logEntrySummary = sanitizeForLog(
+    `Error for route: ${request.originalUrl} - ${request.method} - IP: ${request.ip} - ${message}`
+  )
 
   // Note that the logEntry here is what Winston calls a 'meta' object.
   // Winston simply prints the logEntry to the log as provided - JSON in this case.

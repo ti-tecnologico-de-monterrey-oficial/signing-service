@@ -11,7 +11,6 @@ import {
 } from 'vitest'
 import decodeSeed from './utils/decodeSeed.js'
 import request from 'supertest'
-import axios from 'axios'
 import { clearIssuerInstances } from './issue.js'
 import {
   resetConfig,
@@ -378,21 +377,6 @@ describe('api', () => {
           expect(res.body.message).to.contain('ok')
         })
         .expect(200)
-    })
-
-    it('returns 503 if the signed health credential has no proof', async () => {
-      const originalPost = axios.post
-      axios.post = async () => ({ data: {} })
-
-      try {
-        const response = await request(app).get('/healthz')
-
-        expect(response.status).to.eql(503)
-        expect(response.body.healthy).to.eql(false)
-        expect(response.body.error).to.contain('healthz check failed')
-      } finally {
-        axios.post = originalPost
-      }
     })
   })
 

@@ -1,4 +1,5 @@
 import logger from '../utils/logger.js'
+import sanitizeForLog from '../utils/sanitizeForLog.js'
 
 // Fallback middleware for undefined paths
 const invalidPathHandler = (req, res) => {
@@ -7,7 +8,9 @@ const invalidPathHandler = (req, res) => {
     message: `Route Not Found in signing-service: ${req.originalUrl}`
   })
   logger.error(
-    `404 || ${res.statusMessage} - ${req.originalUrl} - ${req.method} - ${req.ip}`
+    sanitizeForLog(
+      `404 || ${res.statusMessage} - ${req.originalUrl} - ${req.method} - ${req.ip}`
+    )
   )
 }
 
