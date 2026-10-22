@@ -1,7 +1,39 @@
 import { expect } from 'chai'
-import { resetConfig, getTenantSeed } from './config.js'
+import {
+  afterAll as after,
+  afterEach,
+  beforeAll as before,
+  beforeEach,
+  describe,
+  it
+} from 'vitest'
+import { resetConfig, getConfig, getTenantSeed } from './config.js'
 
 const tenantName = 'configtest'
+const withEnvironment = async (overrides, test) => {
+  const originalValues = Object.keys(overrides).map((key) => [key, process.env[key]])
+  for (const [key, value] of Object.entries(overrides)) {
+    if (value === undefined) {
+      delete process.env[key]
+    } else {
+      process.env[key] = value
+    }
+  }
+  resetConfig()
+
+  try {
+    await test()
+  } finally {
+    for (const [key, value] of originalValues) {
+      if (value === undefined) {
+        delete process.env[key]
+      } else {
+        process.env[key] = value
+      }
+    }
+    resetConfig()
+  }
+}
 
 describe('Config', () => {
   before(async () => {})
@@ -15,6 +47,91 @@ describe('Config', () => {
   })
 
   afterEach(async () => {})
+
+  describe('Application config', () => {
+    it('uses defaults when config environment variables are absent', async () => {
+      await withEnvironment(
+        {
+          PORT: undefined,
+          ENABLE_HTTPS_FOR_DEV: undefined,
+          ENABLE_ACCESS_LOGGING: undefined,
+          CONSOLE_LOG_LEVEL: undefined,
+          LOG_LEVEL: undefined,
+          ERROR_LOG_FILE: undefined,
+          LOG_ALL_FILE: undefined
+        },
+        async () => {
+          const config = getConfig()
+
+          expect(config).to.include({
+            port: 4006,
+            enableHttpsForDev: false,
+            enableAccessLogging: false,
+            consoleLogLevel: 'silly',
+            logLevel: 'silly'
+          })
+          expect(getConfig()).to.equal(config)
+        }
+      )
+    })
+
+    it('normalizes configured values and enables optional settings', async () => {
+      await withEnvironment(
+        {
+          PORT: '4010',
+          ENABLE_HTTPS_FOR_DEV: 'TRUE',
+          ENABLE_ACCESS_LOGGING: 'TRUE',
+          CONSOLE_LOG_LEVEL: 'WARN',
+          LOG_LEVEL: 'ERROR',
+          ERROR_LOG_FILE: 'errors.log',
+          LOG_ALL_FILE: 'all.log'
+        },
+        async () => {
+          expect(getConfig()).to.include({
+            port: 4010,
+            enableHttpsForDev: true,
+            enableAccessLogging: true,
+            consoleLogLevel: 'warn',
+            logLevel: 'error',
+            errorLogFile: 'errors.log',
+            logAllFile: 'all.log'
+          })
+        }
+      )
+    })
+
+    it('generates a tenant seed and normalizes its DID method', async () => {
+      await withEnvironment(
+        {
+          TENANT_SEED_GENERATEDTEST: 'generate',
+          TENANT_DIDMETHOD_GENERATEDTEST: 'WEB',
+          TENANT_DID_URL_GENERATEDTEST: 'https://example.com'
+        },
+        async () => {
+          const tenant = await getTenantSeed('generatedtest')
+
+          expect(tenant.didSeed).to.be.instanceOf(Uint8Array)
+          expect(tenant.didSeed).to.have.length(32)
+          expect(tenant.didMethod).to.eql('web')
+          expect(tenant.didUrl).to.eql('https://example.com')
+        }
+      )
+    })
+
+    it('falls back to DID:key for an unsupported DID method', async () => {
+      await withEnvironment(
+        {
+          TENANT_SEED_KEYTEST:
+            'z1AeiPT496wWmo9BG2QYXeTusgFSZPNG3T9wNeTtjrQ3rCB',
+          TENANT_DIDMETHOD_KEYTEST: 'unsupported'
+        },
+        async () => {
+          const tenant = await getTenantSeed('keytest')
+          expect(tenant.didMethod).to.eql('key')
+        }
+      )
+    })
+  })
 
   describe('DID Method', () => {
     it('defaults to use DID:key', async () => {
@@ -71,7 +188,7 @@ describe('Config', () => {
     it('throws an error when the seed is less than 32 bytes', async () => {
       process.env[`TENANT_SEED_${tenantName}`] = 'tooShort'
       try {
-        getTenantSeed('configtest')
+        await getTenantSeed('configtest')
       } catch (err) {
         expect(err).to.eql(
           TypeError(
