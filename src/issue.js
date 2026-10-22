@@ -148,7 +148,7 @@ export class IssuerInstance {
     // this library attaches the signature on the original object, so make a copy
     const credCopy = JSON.parse(JSON.stringify(credential))
     try {
-      return signVC({
+      return await signVC({
         credential: credCopy,
         suite: this.signingSuite,
         documentLoader: this.documentLoader,

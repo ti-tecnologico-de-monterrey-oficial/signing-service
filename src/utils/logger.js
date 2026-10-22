@@ -17,20 +17,8 @@ const levels = {
   silly: 6
 }
 
-// Set severity using LOG_LEVEL from env.
-// If LOG_LEVEL is not set then set
-// it using NODE_ENV from env, where:
-// development: silly, i.e, log everything
-// production: warn and error
-const level = () => {
-  if (logLevel) {
-    return logLevel
-  } else {
-    const env = process.env.NODE_ENV || 'development'
-    const isDevelopment = env === 'development'
-    return isDevelopment ? 'silly' : 'warn'
-  }
-}
+// La severidad sale de LOG_LEVEL; config.js usa 'silly' cuando no está definida.
+const level = () => logLevel
 
 const format = winston.format.combine(
   winston.format.timestamp(),

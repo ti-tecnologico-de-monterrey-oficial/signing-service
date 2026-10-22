@@ -12,6 +12,8 @@ on:
       - 'src/**'
       - '!src/**/*.test.js'
       - '!src/test-fixtures/**'
+      # /healthz importa esta fixture, así que sí viaja en la imagen.
+      - 'src/test-fixtures/vc.js'
       - 'server.js'
       - 'healthcheck.js'
       - 'package.json'
@@ -22,9 +24,33 @@ on:
       - '.github/workflows/_deploy-aca.yml'
 
 jobs:
+  pruebas:
+    name: Pruebas con cobertura
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Clonar el repositorio
+        uses: actions/checkout@v7
+
+      - name: Preparar Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      # Ninguna imagen llega a un ambiente si sus pruebas o su umbral de
+      # cobertura fallan en ese mismo commit.
+      - name: Ejecutar pruebas con cobertura
+        run: npm run test:coverage
+
   dev:
     name: Desplegar a Dev
     if: github.ref_name == 'develop'
+    needs: [pruebas]
     uses: ./.github/workflows/_deploy-aca.yml
     with:
       CONTAINER_NAME: dcc-signing-devl
@@ -34,6 +60,7 @@ jobs:
   release:
     name: Desplegar a PPRD
     if: github.ref_name == 'release'
+    needs: [pruebas]
     uses: ./.github/workflows/_deploy-aca.yml
     with:
       CONTAINER_NAME: dcc-signing-pprd
@@ -43,6 +70,7 @@ jobs:
   main:
     name: Desplegar a Prod
     if: github.ref_name == 'main'
+    needs: [pruebas]
     uses: ./.github/workflows/_deploy-aca.yml
     with:
       CONTAINER_NAME: dcc-signing-prod
