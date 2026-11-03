@@ -1,11 +1,11 @@
-#FROM node:24-alpine
+#FROM node:26.13.0-alpine
 #WORKDIR /app
 #COPY . .
 #RUN npm install
 #CMD ["node", "server.js"]
 #EXPOSE 4006
 
-FROM node:24-alpine
+FROM node:26.13.0-alpine
 WORKDIR /app
 COPY . .
 CMD ["node", "server.js"]
